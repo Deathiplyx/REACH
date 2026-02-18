@@ -1,0 +1,1 @@
+audio folder is used to record your voice for stt to recieve

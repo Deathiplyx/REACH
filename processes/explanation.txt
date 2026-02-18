@@ -1,0 +1,9 @@
+this folder is meant for making the main processes such as - 
+
+Ask → AI task 
+Search → Google search 
+Open → open known site 
+Close → close tab/window 
+Navigate → scroll page 
+Control → media control 
+Communicate → Discord message 

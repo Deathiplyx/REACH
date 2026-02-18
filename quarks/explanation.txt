@@ -1,0 +1,1 @@
+this quarks folder uses mainly temporary scripts for testing functionality before advanced things are put in

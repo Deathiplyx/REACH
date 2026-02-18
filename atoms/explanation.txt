@@ -1,0 +1,1 @@
+this section named atoms has a lot of the small helper functions used in this project
