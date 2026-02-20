@@ -8,7 +8,7 @@ import os
 model = WhisperModel("base")
 
 
-def run():
+def run(audio_file):
     # Get path to REACH root
     base_dir = os.path.dirname(os.path.dirname(__file__))
 

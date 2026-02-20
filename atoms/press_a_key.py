@@ -6,6 +6,6 @@ keyboard = Controller()
 
 
 
-def run():
+def run(key):
     keyboard.press(key)
     keyboard.release(key)
