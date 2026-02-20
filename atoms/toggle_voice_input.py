@@ -1,6 +1,7 @@
 # this code waits for the user to press a button for push to talk
 # first press = start recording
 # second press = stop recording and return audio file
+# ALSO supports manual start/stop for frontend use
 
 from pynput import keyboard
 from atoms.return_the_recorded_audio import start as start_recording
@@ -17,6 +18,9 @@ state = False
 
 # Listener reference
 listener = None
+
+# For manual (frontend) mode
+manual_audio_file = None
 
 
 def on_press(key):
@@ -56,16 +60,47 @@ def on_release(key):
     on_press.triggered = False
 
 
-def run():
-    global listener, state, current
+# -------- Manual control (for frontend / future glasses) --------
+
+def start_manual():
+    global state
+    if not state:
+        state = True
+        print("Manual start recording...")
+        start_recording()
+
+
+def stop_manual():
+    global state, manual_audio_file
+    if state:
+        state = False
+        print("Manual stop recording...")
+        manual_audio_file = stop_recording()
+        return manual_audio_file
+    return None
+
+
+# -------- Main entry --------
+
+def run(mode="keyboard"):
+    global listener, state, current, manual_audio_file
 
     # Reset session state every time run() is called
     state = False
     current = set()
+    manual_audio_file = None
     on_press.triggered = False
 
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.start()
-    listener.join()
+    # --- Keyboard mode (current behavior) ---
+    if mode == "keyboard":
+        listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+        listener.start()
+        listener.join()
+        return getattr(listener, "audio_file", None)
 
-    return getattr(listener, "audio_file", None)
+    # --- Manual mode (frontend controlled) ---
+    elif mode == "manual":
+        print("Waiting for manual start/stop...")
+        while manual_audio_file is None:
+            pass
+        return manual_audio_file
