@@ -1,5 +1,5 @@
-# this script is for speech to text conversion, chat gpt helped format this
-# it loads the audio from REACH/audio/recorded_audio.wav
+# this script is for speech to text conversion
+# it now uses the audio file that is passed in (network or local)
 
 from faster_whisper import WhisperModel
 import math
@@ -9,12 +9,22 @@ model = WhisperModel("base")
 
 
 def run(audio_file):
-    # Get path to REACH root
-    base_dir = os.path.dirname(os.path.dirname(__file__))
+    # --- Make path absolute if needed ---
+    if not os.path.isabs(audio_file):
+        base_dir = os.path.dirname(os.path.dirname(__file__))  # REACH root
+        audio_file = os.path.join(base_dir, audio_file)
 
-    # Path to audio file
-    audio_file = os.path.join(base_dir, "audio", "recorded_audio.wav")
+    # --- Debug ---
+    print("[STT] Loading audio from:", audio_file)
 
+    if not os.path.exists(audio_file):
+        print("[STT ERROR] File does not exist.")
+        return {
+            "text": "",
+            "confidence": 0.0
+        }
+
+    # --- Transcribe ---
     segments, info = model.transcribe(audio_file)
 
     text_parts = []
@@ -26,7 +36,7 @@ def run(audio_file):
 
     text = "".join(text_parts).strip()
 
-    # Average log probability
+    # --- Confidence estimate ---
     if logprobs:
         avg_logprob = sum(logprobs) / len(logprobs)
         confidence = math.exp(avg_logprob)

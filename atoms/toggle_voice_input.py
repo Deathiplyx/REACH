@@ -6,6 +6,11 @@
 from pynput import keyboard
 from atoms.return_the_recorded_audio import start as start_recording
 from atoms.return_the_recorded_audio import stop as stop_recording
+import os
+import time
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # REACH root
+AUDIO_PATH = os.path.join(BASE_DIR, "audio", "network_audio.webm")
 
 # The key combination to check
 COMBINATION = {keyboard.Key.shift_l, keyboard.Key.ctrl_l}
@@ -91,16 +96,61 @@ def run(mode="keyboard"):
     manual_audio_file = None
     on_press.triggered = False
 
-    # --- Keyboard mode (current behavior) ---
+    # --- Keyboard mode ---
     if mode == "keyboard":
         listener = keyboard.Listener(on_press=on_press, on_release=on_release)
         listener.start()
         listener.join()
         return getattr(listener, "audio_file", None)
 
-    # --- Manual mode (frontend controlled) ---
+    # --- Manual mode (network audio polling) ---
     elif mode == "manual":
-        print("Waiting for manual start/stop...")
-        while manual_audio_file is None:
-            pass
-        return manual_audio_file
+        print("========== MANUAL AUDIO MODE ==========")
+        print("Looking for file at:")
+        print(AUDIO_PATH)
+        print("Absolute path exists:", os.path.exists(AUDIO_PATH))
+        print("========================================")
+
+        last_modified = None
+
+        if os.path.exists(AUDIO_PATH):
+            last_modified = os.path.getmtime(AUDIO_PATH)
+            print("Initial file timestamp:", last_modified)
+        else:
+            print("File does NOT exist yet. Waiting for upload...")
+
+        while True:
+            # Debug heartbeat so you know loop is alive
+            print("[DEBUG] Checking for audio file...")
+        
+            if os.path.exists(AUDIO_PATH):
+                try:
+                    current_modified = os.path.getmtime(AUDIO_PATH)
+                    file_size = os.path.getsize(AUDIO_PATH)
+
+                    print(f"[DEBUG] File found | size={file_size} bytes | modified={current_modified}")
+
+                    # Ignore empty files (upload not finished)
+                    if file_size == 0:
+                        print("[DEBUG] File size is 0 — waiting for upload to finish...")
+                        time.sleep(0.5)
+                        continue
+
+                    # Detect new upload
+                    if last_modified is None or current_modified != last_modified:
+                        print("[DEBUG] New or updated audio detected!")
+                        last_modified = current_modified
+
+                        # Extra wait to ensure write is complete
+                        time.sleep(1)
+
+                        print(">>> AUDIO READY FOR STT <<<")
+                        return AUDIO_PATH
+
+                except Exception as e:
+                    print("[ERROR] Problem reading file:", e)
+
+            else:
+                print("[DEBUG] File not found yet.")
+
+            time.sleep(0.5)

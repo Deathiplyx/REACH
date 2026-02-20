@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REACH Voice</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+}
+
+h1 {
+    margin-bottom: 20px;
+    font-size: 28px;
+}
+
+.status {
+    margin-bottom: 30px;
+    font-size: 18px;
+    color: #94a3b8;
+}
+
+button {
+    width: 100%;
+    padding: 22px;
+    margin: 12px 0;
+    font-size: 22px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.start {
+    background: #22c55e;
+    color: white;
+}
+
+.stop {
+    background: #ef4444;
+    color: white;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1>REACH</h1>
+    <div id="status" class="status">Idle</div>
+
+    <button class="start" onclick="start()">Start Listening</button>
+    <button class="stop" onclick="stop()">Stop & Send</button>
+</div>
+
+<script>
+let mediaRecorder;
+let audioChunks = [];
+let stream;
+
+const status = document.getElementById("status");
+
+async function start() {
+    status.textContent = "Requesting microphone...";
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = e => {
+            audioChunks.push(e.data);
+        };
+
+        mediaRecorder.start();
+        status.textContent = "Recording...";
+    } catch (err) {
+        console.error(err);
+        status.textContent = "Microphone blocked or unavailable";
+    }
+}
+
+function stop() {
+    if (!mediaRecorder) {
+        status.textContent = "Not recording";
+        return;
+    }
+
+    mediaRecorder.stop();
+    status.textContent = "Sending audio...";
+
+    mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        audioChunks = [];
+
+        const formData = new FormData();
+        formData.append("file", blob, "audio.webm");
+
+        await fetch("/audio", {
+            method: "POST",
+            body: formData
+        });
+
+        status.textContent = "Sent. Waiting for next command.";
+    };
+}
+</script>
+</body>
+</html>
