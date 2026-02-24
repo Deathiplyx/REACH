@@ -9,41 +9,54 @@ from atoms.type_text_exactly import run as type_text_exactly
 from atoms.wait_for_a_number_of_seconds import run as wait_for_a_number_of_seconds
 
 from pynput.keyboard import Key
+from reach_language import ASK_PREFIXES
+
+
+def clean_ask_text(text):
+    """
+    Removes common ask prefixes so the question
+    sent to ChatGPT is clean.
+    """
+    command = text.lower().strip()
+
+    for prefix in ASK_PREFIXES:
+        if command.startswith(prefix + " "):
+            return command[len(prefix) + 1:]
+
+    return command
 
 
 def run(text):
-    # text example: "what is entropy"
-    # or: "explain black holes"
-
     if not text:
         return "fail"
 
-    # 1. Open browser (opens default browser)
+    # --- Normalize language ---
+    question = clean_ask_text(text)
+
+    if not question:
+        return "fail"
+
+    # 1. Open browser
     if not open_browser():
         return "fail"
 
-    # 2. Wait for browser to be ready
     wait_for_a_number_of_seconds(2)
 
-    # 3. Open ChatGPT using address bar
-    # Ctrl + L focuses address bar
+    # 2. Focus address bar
     press_a_key_combination(Key.ctrl_l, 'l')
-
     wait_for_a_number_of_seconds(0.5)
 
-    # 4. Type ChatGPT URL
+    # 3. Go to ChatGPT
     type_text_exactly("https://chatgpt.com")
-
-    # 5. Go to site
     press_a_key(Key.enter)
 
-    # 6. Wait for ChatGPT to load
+    # 4. Wait for page load
     wait_for_a_number_of_seconds(5)
 
-    # 7. Type the user's question
-    type_text_exactly(text)
+    # 5. Type question
+    type_text_exactly(question)
 
-    # 8. Submit the prompt
+    # 6. Submit
     press_a_key(Key.enter)
 
     return "success"

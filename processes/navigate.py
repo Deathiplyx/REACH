@@ -54,8 +54,15 @@ from atoms.next_video import run as next_video
 from atoms.press_a_key import run as press_key
 from atoms.type_text_exactly import run as type_text
 from atoms.wait_for_a_number_of_seconds import run as wait
+from pynput.keyboard import Key, Controller
+from reach_language import NAVIGATE_COMMANDS
 
-from pynput.keyboard import Key
+
+def contains_phrase(text, phrases):
+    for phrase in phrases:
+        if phrase in text:
+            return True
+    return False
 
 
 def run(text):
@@ -64,53 +71,46 @@ def run(text):
 
     command = text.lower().strip()
 
-    # Remove wake word if present
-    if command.startswith("navigate "):
-        command = command[len("navigate "):]
-    elif command == "navigate":
-        return "fail"
-
     # --- Zoom ---
-    if "zoom in" in command:
+    if contains_phrase(command, NAVIGATE_COMMANDS["zoom_in"]):
         zoom_in()
         return "success"
 
-    if "zoom out" in command:
+    if contains_phrase(command, NAVIGATE_COMMANDS["zoom_out"]):
         zoom_out()
         return "success"
 
     # --- Scroll ---
-    if "scroll up" in command:
+    if contains_phrase(command, NAVIGATE_COMMANDS["scroll_up"]):
         scroll_up()
         return "success"
 
-    if "scroll down" in command:
+    if contains_phrase(command, NAVIGATE_COMMANDS["scroll_down"]):
         scroll_down()
         return "success"
 
-    # --- Browser history ---
-    if "go back" in command:
+    # --- History ---
+    if contains_phrase(command, NAVIGATE_COMMANDS["back"]):
         go_back()
         return "success"
 
-    if "go forward" in command:
+    if contains_phrase(command, NAVIGATE_COMMANDS["forward"]):
         go_forward()
         return "success"
 
     # --- Results / media ---
-    if "open first result" in command or 'open the first result' in command:
+    if contains_phrase(command, NAVIGATE_COMMANDS["open_first"]):
         open_first_result()
         return "success"
-
-    if "next video" in command:
-        next_video()
+        # --- TAB ---
+    if contains_phrase(command, NAVIGATE_COMMANDS["tab"]):
+        press_key(Key.tab)
+        wait(0.2)
         return "success"
-
     # --- Typing ---
     if command.startswith("type "):
         content = command[len("type "):]
 
-        # type and enter
         if content.endswith(" and enter"):
             content = content[:-10]
             type_text(content)
@@ -118,12 +118,11 @@ def run(text):
             press_key(Key.enter)
             return "success"
 
-        # type only
         type_text(content)
         return "success"
 
     # --- Enter only ---
-    if command == "enter":
+    if contains_phrase(command, NAVIGATE_COMMANDS["enter"]):
         press_key(Key.enter)
         return "success"
 

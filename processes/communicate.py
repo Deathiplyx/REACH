@@ -24,9 +24,7 @@
 
 
 # processes/communicate.py
-# This process handles the "communicate" wake word.
-# It opens Discord Web, finds a user/channel with Ctrl+K,
-# then sends a single message.
+# Opens Discord and sends a message to a user/channel
 
 from atoms.open_browser import run as open_browser
 from atoms.press_a_key import run as press_a_key
@@ -35,19 +33,33 @@ from atoms.type_text_exactly import run as type_text_exactly
 from atoms.wait_for_a_number_of_seconds import run as wait_for_a_number_of_seconds
 
 from pynput.keyboard import Key
+from reach_language import COMMUNICATE_PREFIXES
+
+
+def clean_communicate_text(text):
+    """
+    Removes communication prefixes so input becomes:
+    'john hello there'
+    """
+    command = text.lower().strip()
+
+    for prefix in COMMUNICATE_PREFIXES:
+        if command.startswith(prefix + " "):
+            return command[len(prefix) + 1:]
+
+    return command
 
 
 def run(text):
-    # Expected example:
-    # "john hello how are you"
-    # first word = user/channel
-    # rest = message
-
     if not text:
         return "fail"
 
-    # --- Split input ---
-    parts = text.split(" ", 1)
+    # --- Normalize language ---
+    command = clean_communicate_text(text)
+
+    # Expected format after cleaning:
+    # "john hello how are you"
+    parts = command.split(" ", 1)
 
     if len(parts) < 2:
         return "fail"
@@ -55,43 +67,38 @@ def run(text):
     target = parts[0]
     message = parts[1]
 
-    # 1. Open browser
+    # --- Open browser ---
     if not open_browser():
         return "fail"
 
-    # 2. Wait for browser
     wait_for_a_number_of_seconds(2)
 
-    # 3. Go to Discord
+    # --- Open Discord ---
     press_a_key_combination(Key.ctrl_l, 'l')
     wait_for_a_number_of_seconds(0.5)
 
     type_text_exactly("https://discord.com/app")
     press_a_key(Key.enter)
 
-    # 4. Wait for Discord to load
     wait_for_a_number_of_seconds(6)
 
-    # 5. Open Quick Switcher (Ctrl+K)
+    # --- Quick switcher ---
     press_a_key_combination(Key.ctrl_l, 'k')
     wait_for_a_number_of_seconds(0.5)
 
-    # 6. Type user/channel name
+    # --- Select user/channel ---
     type_text_exactly(target)
     wait_for_a_number_of_seconds(1)
 
-    # 7. Select it
     press_a_key(Key.enter)
     wait_for_a_number_of_seconds(1)
 
-    # 8. Move to message box
+    # --- Focus message box ---
     press_a_key(Key.tab)
     wait_for_a_number_of_seconds(0.3)
 
-    # 9. Type message
+    # --- Send message ---
     type_text_exactly(message)
-
-    # 10. Send
     press_a_key(Key.enter)
 
     return "success"

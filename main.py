@@ -55,6 +55,7 @@
 # REACH - Remote Execution And Command Handler
 # Main control loop
 
+
 from processes.main_stt import run as get_voice_command
 
 from processes.ask import run as ask
@@ -65,6 +66,20 @@ from processes.search import run as search
 
 from atoms.create_a_failure_result import run as failure
 from atoms.create_a_success_result import run as success
+from atoms.speak_text_to_the_user import run as speak
+
+# Language layer
+from reach_language import get_wake_word
+
+
+# Minimum words required per intent
+MIN_WORDS_BY_INTENT = {
+    "ask": 1,
+    "search": 1,
+    "navigate": 1,
+    "control": 1,
+    "communicate": 2   # needs target + message
+}
 
 
 def route_command(wake_word, content):
@@ -89,25 +104,64 @@ def route_command(wake_word, content):
 
 def run():
     while True:
-        # 1. Get voice input
-        wake_word, content = get_voice_command()
+        # 1. Get RAW text from STT
+        text = get_voice_command()
 
-        if wake_word == "fail":
+        if not text or text == "fail":
+            print("[MAIN] No valid speech detected")
             failure("fail")
             continue
 
-        # 2. Route to correct process
+        text = text.strip()
+        print("[MAIN] Raw text:", text)
+
+        # 2. Language layer → intent + content
+        wake_word, content = get_wake_word(text)
+
+        print("[MAIN] Intent:", wake_word)
+        print("[MAIN] Content:", content)
+
+        # 3. Intent check
+        if wake_word == "fail":
+            print("[MAIN] No intent detected")
+            speak("I didn't understand the command.")
+            failure("fail")
+            continue
+
+        # 4. Intent-specific content validation
+        min_words = MIN_WORDS_BY_INTENT.get(wake_word, 1)
+
+        if not content or len(content.split()) < min_words:
+            print(f"[MAIN] Content too short for intent: {wake_word}")
+
+            # Clarification instead of silent failure
+            if wake_word == "communicate":
+                speak("Who do you want to message and what should I say?")
+            elif wake_word == "search":
+                speak("What should I search for?")
+            elif wake_word == "ask":
+                speak("What would you like to ask?")
+            elif wake_word == "navigate":
+                speak("What should I navigate?")
+            elif wake_word == "control":
+                speak("What would you like to control?")
+            else:
+                speak("Please provide more details.")
+
+            failure("fail")
+            continue
+
+        # 5. Route to process
         result = route_command(wake_word, content)
 
-        # 3. Handle result
+        # 6. Result handling
         if result == "success":
             success("success")
         else:
+            print("[MAIN] Process returned fail")
+            speak("That command didn't work.")
             failure("fail")
 
 
 # Start REACH
 run()
-
-
-

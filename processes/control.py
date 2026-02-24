@@ -19,8 +19,7 @@
 #send_play_pause_media_command
 
 # processes/control.py
-# This process handles the "control" wake word.
-# It performs common media controls using atomic scripts.
+# Handles media/system control commands using flexible language matching
 
 from atoms.decrease_system_volume import run as decrease_volume
 from atoms.increase_system_volume import run as increase_volume
@@ -28,6 +27,16 @@ from atoms.toggle_system_mute import run as toggle_mute
 from atoms.send_play_pause_media_command import run as play_pause
 from atoms.next_video import run as next_video
 from atoms.wait_for_a_number_of_seconds import run as wait
+from atoms.press_a_key import run as press_key
+from pynput.keyboard import Key, Controller
+from reach_language import CONTROL_COMMANDS
+
+
+def contains_phrase(text, phrases):
+    for phrase in phrases:
+        if phrase in text:
+            return True
+    return False
 
 
 def run(text):
@@ -36,36 +45,37 @@ def run(text):
 
     command = text.lower().strip()
 
-    # --- REMOVE WAKE WORD IF PRESENT ---
-    if command.startswith("control "):
-        command = command[len("control "):]
-    elif command == "control":
-        return "fail"
 
-    # --- Play / Pause ---
-    if "pause" in command or "play" in command:
+    # --- TAB ---
+    if contains_phrase(command, CONTROL_COMMANDS["tab"]):
+        press_key(Key.tab)
+        wait(0.2)
+        return "success"
+
+    # --- PLAY / PAUSE ---
+    if contains_phrase(command, CONTROL_COMMANDS["play_pause"]):
         play_pause()
         return "success"
 
-    # --- Mute ---
-    if "mute" in command:
+    # --- MUTE ---
+    if contains_phrase(command, CONTROL_COMMANDS["mute"]):
         toggle_mute()
         return "success"
 
-    # --- Volume Up ---
-    if "volume up" in command or "louder" in command:
+    # --- VOLUME UP ---
+    if contains_phrase(command, CONTROL_COMMANDS["volume_up"]):
         increase_volume()
         wait(0.2)
         return "success"
 
-    # --- Volume Down ---
-    if "volume down" in command or "quieter" in command:
+    # --- VOLUME DOWN ---
+    if contains_phrase(command, CONTROL_COMMANDS["volume_down"]):
         decrease_volume()
         wait(0.2)
         return "success"
 
-    # --- Next Video / Track ---
-    if "next" in command or "skip" in command:
+    # --- NEXT TRACK / VIDEO ---
+    if contains_phrase(command, CONTROL_COMMANDS["next"]):
         next_video()
         return "success"
 
